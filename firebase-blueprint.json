@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with role-based access",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "manager", "staff"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "email", "role"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product category",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Warehouse": {
+      "title": "Warehouse",
+      "description": "Storage location",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "location": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Product supplier",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "contactName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Inventory item",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "sku": { "type": "string" },
+        "minStockLevel": { "type": "number" },
+        "supplierId": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "unitOfMeasure": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "sku"]
+    },
+    "Inventory": {
+      "title": "Inventory",
+      "description": "Stock level per product and warehouse",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "warehouseId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "reservedQuantity": { "type": "number" }
+      },
+      "required": ["productId", "warehouseId", "quantity"]
+    },
+    "PurchaseOrder": {
+      "title": "Purchase Order",
+      "description": "Order to a supplier",
+      "type": "object",
+      "properties": {
+        "supplierId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "received", "cancelled"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unitPrice": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["supplierId", "status", "createdBy"]
+    },
+    "SalesOrder": {
+      "title": "Sales Order",
+      "description": "Customer order",
+      "type": "object",
+      "properties": {
+        "soNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "salesPerson": { "type": "string" },
+        "warehouseId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "dispatched", "completed", "cancelled"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unitPrice": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["soNumber", "customerName", "status", "createdBy"]
+    },
+    "DispatchNote": {
+      "title": "Dispatch Note",
+      "description": "Shipping document",
+      "type": "object",
+      "properties": {
+        "dispatchNumber": { "type": "string" },
+        "soId": { "type": "string" },
+        "vehicleNumber": { "type": "string" },
+        "driverName": { "type": "string" },
+        "driverIdNumber": { "type": "string" },
+        "companyName": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending_payment", "payment_received", "payment_not_received"] },
+        "paymentType": { "type": "string", "enum": ["cash", "check"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unitPrice": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["dispatchNumber", "soId", "status", "createdBy"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "System activity log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "entity": { "type": "string" },
+        "entityId": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["action", "entity", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/categories/{categoryId}": { "schema": "Category", "description": "Product categories" },
+    "/warehouses/{warehouseId}": { "schema": "Warehouse", "description": "Warehouses" },
+    "/suppliers/{supplierId}": { "schema": "Supplier", "description": "Suppliers" },
+    "/products/{productId}": { "schema": "Product", "description": "Products" },
+    "/inventory/{inventoryId}": { "schema": "Inventory", "description": "Inventory levels" },
+    "/purchase_orders/{poId}": { "schema": "PurchaseOrder", "description": "Purchase orders" },
+    "/sales_orders/{soId}": { "schema": "SalesOrder", "description": "Sales orders" },
+    "/dispatch_notes/{dispatchId}": { "schema": "DispatchNote", "description": "Dispatch notes" },
+    "/audit_logs/{logId}": { "schema": "AuditLog", "description": "Audit logs" }
+  }
+}

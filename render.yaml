@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: inventory-management-app
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: APP_URL
+        fromService:
+          type: web
+          property: host
+    disk:
+      name: database-storage
+      mountPath: /data
+      sizeGB: 1

@@ -1,0 +1,168 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: username, email, role, createdAt
+    //
+    // Collection: categories
+    // Fields: name, description
+    //
+    // Collection: warehouses
+    // Fields: name, location
+    //
+    // Collection: suppliers
+    // Fields: name, contactName, email, phone, address, createdAt
+    //
+    // Collection: products
+    // Fields: name, categoryId, sku, minStockLevel, supplierId, imageUrl, unitOfMeasure, createdAt
+    //
+    // Collection: inventory
+    // Fields: productId, warehouseId, quantity, reservedQuantity
+    //
+    // Collection: purchase_orders
+    // Fields: supplierId, status, createdBy, createdAt, items (array of objects)
+    //
+    // Collection: sales_orders
+    // Fields: soNumber, customerName, salesPerson, warehouseId, status, createdBy, createdAt, items (array of objects)
+    //
+    // Collection: dispatch_notes
+    // Fields: dispatchNumber, soId, vehicleNumber, driverName, driverIdNumber, companyName, status, paymentType, createdBy, createdAt, items (array of objects)
+    //
+    // Collection: audit_logs
+    // Fields: userId, action, entity, entityId, details, timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+         (request.auth.token.email == "bdshan248@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isManager() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "bdshan248@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['username', 'email', 'role', 'createdAt']) &&
+             data.username is string && data.username.size() > 0 && data.username.size() < 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'manager', 'staff'];
+    }
+
+    function isValidCategory(data) {
+      return hasOnlyAllowedFields(['name', 'description']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100;
+    }
+
+    function isValidWarehouse(data) {
+      return hasOnlyAllowedFields(['name', 'location']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100;
+    }
+
+    function isValidSupplier(data) {
+      return hasOnlyAllowedFields(['name', 'contactName', 'email', 'phone', 'address', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200;
+    }
+
+    function isValidProduct(data) {
+      return hasOnlyAllowedFields(['name', 'categoryId', 'sku', 'minStockLevel', 'supplierId', 'imageUrl', 'unitOfMeasure', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.sku is string && data.sku.size() > 0 && data.sku.size() < 50;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+      allow delete: if isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+
+    match /warehouses/{warehouseId} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+
+    match /inventory/{inventoryId} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+
+    match /purchase_orders/{poId} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+
+    match /sales_orders/{soId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /dispatch_notes/{dispatchId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
