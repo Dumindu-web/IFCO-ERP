@@ -1,13 +1,21 @@
-export function fuzzySearch<T>(items: T[], searchTerm: string, keys: (keyof T)[]): T[] {
-  if (!searchTerm) return items;
-  const lowerSearchTerm = searchTerm.toLowerCase();
-  return items.filter(item => {
-    return keys.some(key => {
-      const value = item[key];
-      if (typeof value === 'string') {
-        return value.toLowerCase().includes(lowerSearchTerm);
-      }
-      return false;
-    });
+import Fuse, { IFuseOptions } from 'fuse.js';
+
+export function fuzzySearch<T>(
+  list: T[],
+  searchTerm: string,
+  keys: string[],
+  options: IFuseOptions<T> = {}
+): T[] {
+  if (!searchTerm) return list;
+
+  const fuse = new Fuse(list, {
+    threshold: 0.3,
+    location: 0,
+    distance: 100,
+    minMatchCharLength: 1,
+    keys,
+    ...options,
   });
+
+  return fuse.search(searchTerm).map((result) => result.item);
 }

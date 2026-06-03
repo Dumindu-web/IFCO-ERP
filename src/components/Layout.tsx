@@ -49,7 +49,7 @@ export default function Layout() {
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col print:hidden">
         <div className="h-16 flex items-center px-6 border-b border-gray-200">
           <Boxes className="h-6 w-6 text-indigo-600 mr-2" />
-          <span className="text-lg font-bold text-gray-900">IFCO Systems</span>
+          <span className="text-lg font-bold text-gray-900">IFCO ERP</span>
         </div>
         
         <nav className="flex-1 overflow-y-auto py-4">

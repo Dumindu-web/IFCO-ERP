@@ -1,93 +1,67 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut,
-  User as FirebaseUser 
-} from 'firebase/auth';
-import { auth } from '../firebase';
 
 interface User {
-  email: string;
-  role: 'ppi' | 'guest';
-  uid: string;
+  id: number;
+  username: string;
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  loginWithGoogle: () => Promise<boolean>;
-  logout: () => Promise<void>;
+  token: string | null;
+  login: (token: string, user: User) => void;
+  logout: () => void;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ALLOWED_EMAILS = [
-  'kalpithagunawardhana03@gmail.com',
-  'bdshan248@gmail.com'
-];
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(sessionStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser && firebaseUser.email) {
-        const isAllowed = ALLOWED_EMAILS.some(
-          email => email.toLowerCase() === firebaseUser.email?.toLowerCase()
-        );
-        
-        if (isAllowed) {
-          setUser({
-            email: firebaseUser.email,
-            role: 'ppi',
-            uid: firebaseUser.uid
-          });
-        } else {
-          signOut(auth);
-          setUser(null);
+    if (token) {
+      fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(async res => {
+        if (!res.ok) throw new Error('Invalid token');
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error('Invalid JSON response');
         }
-      } else {
-        setUser(null);
-      }
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const loginWithGoogle = async (): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-      
-      if (firebaseUser.email) {
-        const isAllowed = ALLOWED_EMAILS.some(
-          email => email.toLowerCase() === firebaseUser.email?.toLowerCase()
-        );
-        
-        return isAllowed;
-      }
-      return false;
-    } catch (error: any) {
-      console.error('Login error:', error);
-      return false;
-    } finally {
+      })
+      .then(data => {
+        setUser(data.user);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        logout();
+        setIsLoading(false);
+      });
+    } else {
       setIsLoading(false);
     }
+  }, [token]);
+
+  const login = (newToken: string, newUser: User) => {
+    sessionStorage.setItem('token', newToken);
+    setToken(newToken);
+    setUser(newUser);
   };
 
-  const logout = async () => {
-    await signOut(auth);
+  const logout = () => {
+    sessionStorage.removeItem('token');
+    setToken(null);
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loginWithGoogle, logout, isLoading } as any}>
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

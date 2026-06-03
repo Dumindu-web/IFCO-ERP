@@ -1,33 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.js';
-import { Package, Truck, ShoppingCart, AlertTriangle } from 'lucide-react';
+import { Package, Truck, ShoppingCart, AlertTriangle, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { useFirestoreCollection } from '../hooks/useFirestore.js';
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  
-  const { data: products, loading: productsLoading } = useFirestoreCollection<any>('products');
-  const { data: suppliers } = useFirestoreCollection<any>('suppliers');
-  const { data: salesOrders } = useFirestoreCollection<any>('sales_orders');
-  const { data: transactions } = useFirestoreCollection<any>('audit_logs');
+  const { token } = useAuth();
+  const [stats, setStats] = useState<any>(null);
 
-  if (productsLoading) return <div>Loading dashboard...</div>;
+  useEffect(() => {
+    fetch('/api/dashboard/stats', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(async res => {
+        if (!res.ok) throw new Error('Failed to fetch stats');
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error('Invalid JSON response');
+        }
+      })
+      .then(data => setStats(data))
+      .catch(console.error);
+  }, [token]);
 
-  const lowStockItems = products.filter(p => (p.quantity || 0) < (p.minStockLevel || 0)).length;
-
-  const stats = {
-    totalProducts: products.length,
-    lowStockItems: lowStockItems,
-    totalSuppliers: suppliers.length,
-    totalSales: salesOrders.length,
-    chartData: [], // Would need more complex aggregation for real chart data
-    recentTransactions: transactions.slice(0, 5).map(t => ({
-      ...t,
-      product_name: t.details?.split(' ')[0] || 'Item' // Simplified
-    })),
-    salesVsPurchases: []
-  };
+  if (!stats) return <div>Loading...</div>;
 
   const statCards = [
     { name: 'Total Products', value: stats.totalProducts, icon: Package, color: 'text-blue-600', bg: 'bg-blue-100' },

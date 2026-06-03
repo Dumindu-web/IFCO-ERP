@@ -1,27 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.js';
 import { Search } from 'lucide-react';
 import { fuzzySearch } from '../utils/search.js';
-import { useFirestoreCollection } from '../hooks/useFirestore.js';
 
 export default function Products() {
-  const { user } = useAuth();
+  const { token } = useAuth();
+  const [products, setProducts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const { data: products, loading: productsLoading } = useFirestoreCollection<any>('products');
-  const { data: categories } = useFirestoreCollection<any>('categories');
-  const { data: suppliers } = useFirestoreCollection<any>('suppliers');
 
-  if (productsLoading) return <div>Loading products...</div>;
+  const fetchProducts = () => {
+    fetch('/api/products', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(async res => {
+        if (!res.ok) throw new Error('Failed to fetch products');
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error('Invalid JSON response');
+        }
+      })
+      .then(data => setProducts(data))
+      .catch(console.error);
+  };
 
-  const enrichedProducts = products.map(product => ({
-    ...product,
-    category_name: categories.find(c => c.id === product.categoryId)?.name || 'N/A',
-    supplier_name: suppliers.find(s => s.id === product.supplierId)?.name || 'N/A'
-  }));
+  useEffect(() => {
+    fetchProducts();
+  }, [token]);
 
   const filteredProducts = fuzzySearch<any>(
-    enrichedProducts.filter(p => p.category_name === 'F.G'),
+    products.filter(p => p.category_name === 'F.G'),
     searchTerm,
     ['name', 'sku']
   );

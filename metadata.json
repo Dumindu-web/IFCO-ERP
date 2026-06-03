@@ -1,0 +1,5 @@
+{
+  "name": "IFCO Inventory System",
+  "description": "A lightweight ERP and Inventory Management System with role-based access control, dashboard, and real-time stock tracking.",
+  "requestFramePermissions": []
+}

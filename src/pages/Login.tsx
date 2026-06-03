@@ -1,88 +1,92 @@
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { LogIn, ShieldAlert, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../contexts/AuthContext.js';
+import { useNavigate } from 'react-router-dom';
+import { Boxes } from 'lucide-react';
 
 export default function Login() {
-  const [error, setError] = useState<string | null>(null);
-  const { loginWithGoogle, isLoading } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-  const handleGoogleLogin = async () => {
-    setError(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const success = await loginWithGoogle();
-      if (!success) {
-        setError('Access denied. This account is not authorized for PPI access.');
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error(`Server error: ${res.status} ${res.statusText}`);
       }
+      
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      
+      login(data.token, data.user);
+      navigate('/');
     } catch (err: any) {
-      console.error("Login attempt failed:", err);
-      setError('Login failed. Please try again or use Local Mode if available.');
+      setError(err.message);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4 border border-emerald-500/20">
-              <LogIn className="w-8 h-8 text-emerald-500" />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <Boxes className="mx-auto h-12 w-12 text-indigo-600" />
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to IFCO ERP
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="rounded-md bg-red-50 p-4">
+              <div className="text-sm text-red-700">{error}</div>
             </div>
-            <h1 className="text-2xl font-bold text-white">IFCO Systems</h1>
-            <p className="text-zinc-500 text-sm mt-1">Inventory Management Portal</p>
+          )}
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <p className="text-zinc-400 text-sm">
-                Please sign in with your authorized Google account to access the system from any device.
-              </p>
-            </div>
-
-            <AnimatePresence mode="wait">
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-start gap-3 mb-4"
-                >
-                  <ShieldAlert className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-400">{error}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
+          <div>
             <button
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-800 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/20"
+              type="submit"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  Sign in with Google
-                </>
-              )}
+              Sign in
             </button>
           </div>
-
-          <div className="mt-8 pt-6 border-t border-zinc-800 text-center">
-            <p className="text-xs text-zinc-600 uppercase tracking-widest font-medium mb-2">
-              Authorized Access Only
-            </p>
-            <p className="text-[10px] text-zinc-700 italic">
-              Your data is securely synced to the cloud for access from any device.
-            </p>
-          </div>
-        </div>
-      </motion.div>
+        </form>
+      </div>
     </div>
   );
 }
